@@ -1,56 +1,53 @@
+#!/usr/bin/env python3
 """
-Coffee Bean Data DynamoDB Table using PynamoDB
+Coffee Bean Data Application - Example usage.
 """
-from pynamodb.models import Model
-from pynamodb.attributes import (
-    UnicodeAttribute,
-    UTCDateTimeAttribute,
-    ListAttribute,
-)
-
-
-class CoffeeBeanData(Model):
-    """
-    PynamoDB model for Coffee Bean Data table.
-    """
-    class Meta:
-        table_name = "coffee-bean-data"
-        region = "us-east-1"  # Change to your preferred region
-
-    # Primary key: Coffee roast name
-    coffee_roast_name = UnicodeAttribute(hash_key=True)
-
-    # Attributes
-    country_of_origin = UnicodeAttribute()
-    roast_date = UTCDateTimeAttribute()
-    flavour_notes = ListAttribute(of=UnicodeAttribute)
-    vendor_name = UnicodeAttribute()
-
-
-def create_table():
-    """
-    Create the DynamoDB table if it doesn't exist.
-    """
-    try:
-        if not CoffeeBeanData.exists():
-            CoffeeBeanData.create_table(
-                read_capacity_units=5,
-                write_capacity_units=5,
-                wait=True
-            )
-            print("Table 'coffee-bean-data' created successfully!")
-        else:
-            print("Table 'coffee-bean-data' already exists.")
-    except Exception as e:
-        print(f"Error creating table: {e}")
+from datetime import datetime
+from services.coffee_service import CoffeeService
 
 
 def main():
     """
-    Main function to create the coffee bean data table.
+    Main application demonstrating coffee bean data operations.
     """
-    print("Creating Coffee Bean Data DynamoDB table...")
-    create_table()
+    print("Coffee Bean Data Application")
+    print("=" * 50)
+
+    # Example: Create a new coffee bean entry
+    print("\n1. Creating a new coffee bean entry...")
+    try:
+        coffee = CoffeeService.create_coffee_bean(
+            coffee_roast_name="Ethiopian Yirgacheffe",
+            country_of_origin="Ethiopia",
+            roast_date=datetime.now(),
+            flavour_notes=["floral", "citrus", "berry"],
+            vendor_name="Blue Bottle Coffee"
+        )
+        print(f"   Created: {coffee.coffee_roast_name}")
+    except Exception as e:
+        print(f"   Note: {e}")
+
+    # Example: Get a coffee bean
+    print("\n2. Retrieving coffee bean...")
+    coffee = CoffeeService.get_coffee_bean("Ethiopian Yirgacheffe")
+    if coffee:
+        print(f"   Found: {coffee.coffee_roast_name}")
+        print(f"   Origin: {coffee.country_of_origin}")
+        print(f"   Vendor: {coffee.vendor_name}")
+        print(f"   Flavours: {', '.join(coffee.flavour_notes)}")
+    else:
+        print("   Not found")
+
+    # Example: List all coffee beans
+    print("\n3. Listing all coffee beans...")
+    all_coffees = CoffeeService.list_all_coffee_beans()
+    print(f"   Total: {len(all_coffees)} coffee beans")
+    for c in all_coffees:
+        print(f"   - {c.coffee_roast_name} ({c.vendor_name})")
+
+    print("\n" + "=" * 50)
+    print("To deploy infrastructure, run: cdk deploy -c environment=dev")
+    print("For more info, see: CDK_README.md")
 
 
 if __name__ == "__main__":
