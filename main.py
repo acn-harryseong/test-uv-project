@@ -21,7 +21,10 @@ def main():
             country_of_origin="Ethiopia",
             roast_date=datetime.now(),
             flavour_notes=["floral", "citrus", "berry"],
-            vendor_name="Blue Bottle Coffee"
+            vendor_name="Blue Bottle Coffee",
+            variety="Heirloom",
+            process="washed",
+            producer="Gedeb Cooperative"
         )
         print(f"   Created: {coffee.coffee_roast_name}")
     except Exception as e:
@@ -34,6 +37,9 @@ def main():
         print(f"   Found: {coffee.coffee_roast_name}")
         print(f"   Origin: {coffee.country_of_origin}")
         print(f"   Vendor: {coffee.vendor_name}")
+        print(f"   Variety: {coffee.variety}")
+        print(f"   Process: {coffee.process}")
+        print(f"   Producer: {coffee.producer}")
         print(f"   Flavours: {', '.join(coffee.flavour_notes)}")
     else:
         print("   Not found")

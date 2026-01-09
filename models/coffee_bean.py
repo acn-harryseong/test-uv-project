@@ -20,6 +20,9 @@ class CoffeeBeanData(Model):
         roast_date: Date when the coffee was roasted
         flavour_notes: List of flavor characteristics
         vendor_name: Name of the vendor/roaster
+        variety: Coffee variety (e.g., "Red Catuai", "Tabi", "Bourbon")
+        process: Processing method (e.g., "washed", "natural", "natural anaerobic")
+        producer: Name of the coffee producer (e.g., "Octavio Peralta")
     """
     class Meta:
         table_name = TABLE_NAME_COFFEE_BEAN
@@ -33,3 +36,6 @@ class CoffeeBeanData(Model):
     roast_date = UTCDateTimeAttribute()
     flavour_notes = ListAttribute(of=UnicodeAttribute)
     vendor_name = UnicodeAttribute()
+    variety = UnicodeAttribute()
+    process = UnicodeAttribute()
+    producer = UnicodeAttribute()

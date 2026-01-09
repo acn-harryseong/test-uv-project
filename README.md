@@ -15,12 +15,14 @@ test-uv-project/
 ├── config/                      # Configuration
 │   ├── __init__.py
 │   └── settings.py             # AWS region, table settings
-├── scripts/                     # Utility scripts
+├── scripts/                     # Deployment scripts
 │   ├── __init__.py
-│   └── create_tables.py        # DynamoDB table creation
+│   ├── deploy.sh               # Bash deployment script
+│   └── deploy.ps1              # PowerShell deployment script
 ├── cdk/                         # AWS CDK infrastructure
 │   ├── __init__.py
-│   └── hello_world_stack.py    # Lambda stack definition
+│   ├── config.py               # Environment configurations
+│   └── coffee_bean_stack.py    # Main application stack
 ├── lambda_functions/            # Lambda function code
 │   └── hello_world/
 │       └── handler.py          # Hello World Lambda
@@ -69,18 +71,24 @@ uv sync
 
 Configure settings via environment variables in [config/settings.py](config/settings.py):
 
+- `ENVIRONMENT` - Environment (dev, uat, prod) (default: dev)
 - `AWS_REGION` - AWS region (default: ap-southeast-1)
-- `TABLE_NAME_COFFEE_BEAN` - DynamoDB table name (default: coffee-bean-data)
-- `READ_CAPACITY_UNITS` - Read capacity (default: 5)
-- `WRITE_CAPACITY_UNITS` - Write capacity (default: 5)
+- `TABLE_NAME_COFFEE_BEAN` - DynamoDB table name (default: coffee-bean-data-{ENVIRONMENT})
+
+## Infrastructure Deployment
+
+**DynamoDB tables are created via AWS CDK**, not through Python scripts. See [CDK_README.md](CDK_README.md) for full deployment instructions.
+
+Quick deployment:
+```bash
+# Deploy to dev environment
+cdk deploy -c environment=dev
+
+# Or use the deployment script (Windows)
+.\scripts\deploy.ps1 dev
+```
 
 ## Usage
-
-### Create DynamoDB Tables
-
-```bash
-python scripts/create_tables.py
-```
 
 ### Run the Application
 
@@ -105,7 +113,10 @@ coffee = CoffeeService.create_coffee_bean(
     country_of_origin="Ethiopia",
     roast_date=datetime.now(),
     flavour_notes=["floral", "citrus", "berry"],
-    vendor_name="Blue Bottle Coffee"
+    vendor_name="Blue Bottle Coffee",
+    variety="Heirloom",
+    process="washed",
+    producer="Gedeb Cooperative"
 )
 
 # Get a coffee bean
@@ -128,6 +139,15 @@ vendor_coffees = CoffeeService.find_by_vendor("Blue Bottle Coffee")
 
 # Find by country
 ethiopian_coffees = CoffeeService.find_by_country("Ethiopia")
+
+# Find by variety
+bourbon_coffees = CoffeeService.find_by_variety("Bourbon")
+
+# Find by process
+washed_coffees = CoffeeService.find_by_process("washed")
+
+# Find by producer
+producer_coffees = CoffeeService.find_by_producer("Octavio Peralta")
 ```
 
 ## Running Tests
@@ -148,23 +168,26 @@ pytest tests/ --cov=models --cov=services
 
 ## AWS CDK Deployment
 
-See [CDK_README.md](CDK_README.md) for detailed CDK deployment instructions.
+See [CDK_README.md](CDK_README.md) for detailed CDK deployment instructions and [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for quick reference.
 
 Quick start:
 ```bash
-# Synthesize CloudFormation template
-cdk synth
+# Deploy to dev environment
+cdk deploy -c environment=dev
 
-# Deploy Lambda infrastructure
-cdk deploy
+# Deploy to uat environment
+cdk deploy -c environment=uat
 
-# Destroy infrastructure
-cdk destroy
+# Deploy to prod environment
+cdk deploy -c environment=prod
+
+# Destroy dev infrastructure (table will be deleted)
+cdk destroy -c environment=dev
 ```
 
 ## Coffee Bean Data Model
 
-**Table**: `coffee-bean-data`
+**Table**: `coffee-bean-data-{environment}` (e.g., `coffee-bean-data-dev`)
 
 **Attributes**:
 - `coffee_roast_name` (Primary Key) - Name of the coffee roast
@@ -172,6 +195,9 @@ cdk destroy
 - `roast_date` - Date when the coffee was roasted
 - `flavour_notes` - List of flavor characteristics
 - `vendor_name` - Name of the vendor/roaster
+- `variety` - Coffee variety (e.g., "Red Catuai", "Bourbon", "Heirloom")
+- `process` - Processing method (e.g., "washed", "natural", "natural anaerobic")
+- `producer` - Name of the coffee producer (e.g., "Octavio Peralta")
 
 ## Development
 

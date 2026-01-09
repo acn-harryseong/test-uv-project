@@ -19,6 +19,9 @@ class CoffeeService:
         roast_date: datetime,
         flavour_notes: List[str],
         vendor_name: str,
+        variety: str,
+        process: str,
+        producer: str,
     ) -> CoffeeBeanData:
         """
         Create a new coffee bean entry.
@@ -29,6 +32,9 @@ class CoffeeService:
             roast_date: Date when coffee was roasted
             flavour_notes: List of flavor characteristics
             vendor_name: Vendor/roaster name
+            variety: Coffee variety (e.g., "Red Catuai", "Bourbon")
+            process: Processing method (e.g., "washed", "natural")
+            producer: Name of the coffee producer
 
         Returns:
             Created CoffeeBeanData instance
@@ -42,6 +48,9 @@ class CoffeeService:
             roast_date=roast_date,
             flavour_notes=flavour_notes,
             vendor_name=vendor_name,
+            variety=variety,
+            process=process,
+            producer=producer,
         )
         coffee.save()
         return coffee
@@ -69,6 +78,9 @@ class CoffeeService:
         roast_date: Optional[datetime] = None,
         flavour_notes: Optional[List[str]] = None,
         vendor_name: Optional[str] = None,
+        variety: Optional[str] = None,
+        process: Optional[str] = None,
+        producer: Optional[str] = None,
     ) -> Optional[CoffeeBeanData]:
         """
         Update an existing coffee bean entry.
@@ -79,6 +91,9 @@ class CoffeeService:
             roast_date: New roast date (optional)
             flavour_notes: New flavor notes (optional)
             vendor_name: New vendor name (optional)
+            variety: New coffee variety (optional)
+            process: New processing method (optional)
+            producer: New producer name (optional)
 
         Returns:
             Updated CoffeeBeanData instance if found, None otherwise
@@ -96,6 +111,12 @@ class CoffeeService:
             actions.append(CoffeeBeanData.flavour_notes.set(flavour_notes))
         if vendor_name is not None:
             actions.append(CoffeeBeanData.vendor_name.set(vendor_name))
+        if variety is not None:
+            actions.append(CoffeeBeanData.variety.set(variety))
+        if process is not None:
+            actions.append(CoffeeBeanData.process.set(process))
+        if producer is not None:
+            actions.append(CoffeeBeanData.producer.set(producer))
 
         if actions:
             coffee.update(actions=actions)
@@ -161,5 +182,56 @@ class CoffeeService:
         return list(
             CoffeeBeanData.scan(
                 CoffeeBeanData.country_of_origin == country
+            )
+        )
+
+    @staticmethod
+    def find_by_variety(variety: str) -> List[CoffeeBeanData]:
+        """
+        Find all coffee beans of a specific variety.
+
+        Args:
+            variety: Coffee variety to search for
+
+        Returns:
+            List of CoffeeBeanData instances of the variety
+        """
+        return list(
+            CoffeeBeanData.scan(
+                CoffeeBeanData.variety == variety
+            )
+        )
+
+    @staticmethod
+    def find_by_process(process: str) -> List[CoffeeBeanData]:
+        """
+        Find all coffee beans with a specific processing method.
+
+        Args:
+            process: Processing method to search for
+
+        Returns:
+            List of CoffeeBeanData instances with the process
+        """
+        return list(
+            CoffeeBeanData.scan(
+                CoffeeBeanData.process == process
+            )
+        )
+
+    @staticmethod
+    def find_by_producer(producer: str) -> List[CoffeeBeanData]:
+        """
+        Find all coffee beans from a specific producer.
+
+        Args:
+            producer: Producer name to search for
+
+        Returns:
+            List of CoffeeBeanData instances from the producer
+        """
+        return list(
+            CoffeeBeanData.scan(
+                CoffeeBeanData.producer == producer
             )
         )
