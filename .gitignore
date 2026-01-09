@@ -5,6 +5,39 @@ build/
 dist/
 wheels/
 *.egg-info
+*.so
+*.dylib
+*.dll
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.cover
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
 
 # Virtual environments
 .venv
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
+cdk.context.json
+
+# AWS credentials and configs (safety measure)
+.aws/
+*.pem
+*.key
+
+# Claude Code
+.claude
