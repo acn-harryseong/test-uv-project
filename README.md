@@ -1,11 +1,16 @@
 # Coffee Bean Data Application
 
-A Python application for managing coffee bean data using PynamoDB and AWS DynamoDB, with AWS CDK infrastructure as code.
+A Python application for managing coffee bean data using PynamoDB and AWS DynamoDB, with AWS CDK infrastructure as code. Includes an AI-powered agent for extracting coffee data from photos using AWS Bedrock and Strands SDK.
 
 ## Project Structure
 
 ```
 test-uv-project/
+├── agents/                      # AI Agents
+│   └── coffee_extractor/
+│       ├── __init__.py
+│       ├── agent.py            # Strands agent implementation
+│       └── tools.py            # Agent tools (DynamoDB save)
 ├── models/                      # DynamoDB models
 │   ├── __init__.py
 │   └── coffee_bean.py          # CoffeeBeanData model
@@ -31,16 +36,19 @@ test-uv-project/
 │   └── test_coffee_bean.py     # Tests for coffee bean model/service
 ├── app.py                       # CDK app entry point
 ├── main.py                      # Application entry point
+├── run_coffee_extractor.py     # Coffee extractor agent CLI
 ├── pyproject.toml              # Python dependencies
 └── README.md
 ```
 
 ## Features
 
-- **Coffee Bean Data Model**: Track coffee roasts with attributes like origin, roast date, flavor notes, and vendor
+- **Coffee Bean Data Model**: Track coffee roasts with attributes like origin, roast date, flavor notes, variety, process, and producer
+- **AI-Powered Data Extraction**: Extract coffee data from photos using AWS Bedrock (Claude Sonnet 4.5) and Strands SDK
 - **Service Layer**: Clean separation of business logic with CRUD operations
-- **Configuration Management**: Environment-based settings for AWS region and DynamoDB capacity
-- **AWS CDK Infrastructure**: Deploy Lambda functions with Infrastructure as Code
+- **S3 Storage**: Secure photo storage in environment-specific S3 buckets
+- **Configuration Management**: Environment-based settings for dev/uat/prod
+- **AWS CDK Infrastructure**: Multi-environment infrastructure deployment with DynamoDB, S3, and Lambda
 - **Unit Tests**: Comprehensive test coverage with pytest
 
 ## Prerequisites
@@ -49,6 +57,7 @@ test-uv-project/
 - AWS CLI configured with valid credentials
 - uv package manager
 - AWS CDK CLI (for infrastructure deployment)
+- AWS Bedrock access to Claude Sonnet 4.5 (for AI agent)
 
 ## Installation
 
@@ -90,7 +99,29 @@ cdk deploy -c environment=dev
 
 ## Usage
 
-### Run the Application
+### AI-Powered Photo Extraction (Recommended)
+
+Extract coffee bean data from photos automatically:
+
+```bash
+# Upload photo to S3
+aws s3 cp my-coffee-bag.jpg s3://coffee-beans-data-{account}-{region}/photos/
+
+# Run the extractor agent
+python run_coffee_extractor.py s3://coffee-beans-data-{account}-{region}/photos/my-coffee-bag.jpg
+```
+
+The agent will:
+1. Retrieve the photo from S3
+2. Analyze it using Claude Sonnet 4.5's vision capabilities
+3. Extract all coffee bean data (name, origin, variety, process, etc.)
+4. Automatically save to DynamoDB
+
+See [AGENT_README.md](AGENT_README.md) for detailed agent documentation.
+
+### Manual Data Entry
+
+Run the application for manual operations:
 
 ```bash
 python main.py

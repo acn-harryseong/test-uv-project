@@ -9,6 +9,8 @@ from aws_cdk import (
     aws_dynamodb as dynamodb,
     aws_lambda as lambda_,
     aws_logs as logs,
+    aws_s3 as s3,
+    aws_s3_deployment as s3deploy,
 )
 from constructs import Construct
 from cdk.config import EnvironmentConfig
@@ -20,6 +22,7 @@ class CoffeeBeanStack(Stack):
 
     Resources:
         - DynamoDB table for coffee bean data
+        - S3 bucket for coffee bean photos
         - Lambda function for Hello World example
     """
 
@@ -48,6 +51,18 @@ class CoffeeBeanStack(Stack):
             RemovalPolicy.DESTROY
             if env_config["removal_policy"] == "DESTROY"
             else RemovalPolicy.RETAIN
+        )
+
+        # Create S3 bucket for coffee bean photos
+        self.coffee_bean_data_bucket = s3.Bucket(
+            self,
+            "CoffeeBeanDataBucket",
+            bucket_name=f"coffee-beans-data-{environment}-{self.account}-{self.region}",
+            removal_policy=removal_policy,
+            auto_delete_objects=removal_policy == RemovalPolicy.DESTROY,
+            versioned=env_config["enable_point_in_time_recovery"],
+            encryption=s3.BucketEncryption.S3_MANAGED,
+            block_public_access=s3.BlockPublicAccess.BLOCK_ALL,
         )
 
         # Create DynamoDB table for coffee bean data
@@ -100,3 +115,13 @@ class CoffeeBeanStack(Stack):
 
         # Grant Lambda function read/write access to DynamoDB table
         self.coffee_bean_table.grant_read_write_data(self.hello_world_function)
+
+        # Deploy starter photo files to S3 bucket
+        starter_photos_path = Path(__file__).parent / "assets" / "starter_photos"
+        s3deploy.BucketDeployment(
+            self,
+            "DeployStarterPhotos",
+            sources=[s3deploy.Source.asset(str(starter_photos_path))],
+            destination_bucket=self.coffee_bean_data_bucket,
+            destination_key_prefix="photos/",
+        )
