@@ -63,12 +63,23 @@ class CoffeeBeanStack(Stack):
             read_capacity=env_config["read_capacity"],
             write_capacity=env_config["write_capacity"],
             removal_policy=removal_policy,
-            point_in_time_recovery=env_config["enable_point_in_time_recovery"],
+            point_in_time_recovery_specification=dynamodb.PointInTimeRecoverySpecification(
+                point_in_time_recovery_enabled=env_config["enable_point_in_time_recovery"]
+            ),
             encryption=dynamodb.TableEncryption.AWS_MANAGED,
         )
 
         # Get the path to the Lambda function code
         lambda_dir = Path(__file__).parent.parent / "lambda_functions" / "hello_world"
+
+        # Create CloudWatch log group for Lambda function
+        log_group = logs.LogGroup(
+            self,
+            "HelloWorldFunctionLogGroup",
+            log_group_name=f"/aws/lambda/CoffeeBeanStack-{environment}-HelloWorldFunction",
+            retention=logs.RetentionDays.ONE_WEEK,
+            removal_policy=removal_policy,
+        )
 
         # Create the Lambda function
         self.hello_world_function = lambda_.Function(
@@ -80,7 +91,7 @@ class CoffeeBeanStack(Stack):
             timeout=Duration.seconds(30),
             memory_size=128,
             description=f"Hello World Lambda function - {environment}",
-            log_retention=logs.RetentionDays.ONE_WEEK,
+            log_group=log_group,
             environment={
                 "ENVIRONMENT": environment,
                 "TABLE_NAME": self.coffee_bean_table.table_name,
