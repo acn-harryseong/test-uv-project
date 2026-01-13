@@ -3,10 +3,25 @@ Coffee Bean Data Extractor Agent using Strands SDK.
 """
 import json
 import boto3
+from io import BytesIO
 from typing import Optional
+from PIL import Image
+from pydantic import BaseModel, Field
 from strands import Agent
 from strands.models import BedrockModel
 from agents.coffee_extractor.tools import save_coffee_bean_data
+
+
+class CoffeeBeanData(BaseModel):
+    """Structured data model for coffee bean information extracted from photos."""
+    coffee_roast_name: str = Field(description="Name of the coffee roast/product")
+    country_of_origin: str = Field(description="Country where the beans are from")
+    roast_date: str = Field(description="Date when coffee was roasted (ISO format YYYY-MM-DD)")
+    flavour_notes: list[str] = Field(description="List of flavor characteristics")
+    vendor_name: str = Field(description="Name of the vendor/roaster")
+    variety: str = Field(description="Coffee variety (e.g., 'Red Catuai', 'Bourbon', 'Heirloom')")
+    process: str = Field(description="Processing method (e.g., 'washed', 'natural', 'honey')")
+    producer: str = Field(description="Name of the coffee producer/farm")
 
 
 class CoffeeExtractorAgent:
@@ -18,7 +33,7 @@ class CoffeeExtractorAgent:
     def __init__(
         self,
         region: str = "ap-southeast-1",
-        model_id: str = "us.anthropic.claude-sonnet-4-5-v2:0",
+        model_id: str = "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
     ):
         """
         Initialize the Coffee Extractor Agent.
@@ -33,7 +48,7 @@ class CoffeeExtractorAgent:
 
         self.bedrock_model = BedrockModel(
             model_id=model_id,
-            temperature=0.3,
+            temperature=0,
             top_p=0.8,
         )
 
@@ -47,12 +62,12 @@ class CoffeeExtractorAgent:
 
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the agent."""
-        return """You are a coffee bean data extraction specialist. Your task is to analyze photos of coffee bean bags and extract all relevant information.
+        return """You are a coffee bean data extraction specialist. Your task is to analyze photos of coffee bean bags and extract ONLY information that is clearly visible in the image.
 
 When given a photo of a coffee bean bag, you should:
 
-1. Carefully examine the image to identify all text and labels
-2. Extract the following information:
+1. Carefully examine the image to identify all text and labels that are actually present
+2. Extract ONLY the following information that you can actually see in the image:
    - Coffee roast name (the product name)
    - Country of origin
    - Roast date (convert to ISO format YYYY-MM-DD)
@@ -62,15 +77,24 @@ When given a photo of a coffee bean bag, you should:
    - Process (processing method like "washed", "natural", "honey")
    - Producer (the farm or producer name)
 
-3. Once you've extracted all the data, use the save_coffee_bean_data tool to save it to the database.
+CRITICAL RULES - YOU MUST FOLLOW THESE:
+- ONLY extract text that is actually visible in the image
+- If information is not visible or readable in the image, you MUST use "Unknown" as the value
+- DO NOT infer, guess, or make up any information that is not explicitly shown in the image
+- DO NOT use your general knowledge about coffee to fill in missing information
+- DO NOT hallucinate or fabricate any data
+- Extract text EXACTLY as it appears in the image - do not correct spelling or change wording
+- If the text is blurry or unclear, use "Unknown" rather than guessing
+- For roast dates: only extract if a date is clearly visible; if you only see partial date info, use "Unknown"
+- For flavour notes: only extract if flavor descriptors are printed on the bag; if none are visible, use an empty list []
 
-4. Return a summary of what was extracted and saved.
+Examples of what NOT to do:
+- DO NOT assume a coffee is from Ethiopia just because you see "Heirloom" variety
+- DO NOT guess a roast date based on freshness appearance
+- DO NOT infer a producer name from partial text
+- DO NOT assume "washed" process if no process is mentioned
 
-Important guidelines:
-- If any information is not visible or unclear in the image, make a reasonable inference or note it as "Unknown"
-- Roast dates should be in ISO format (YYYY-MM-DD)
-- Flavour notes should be a list of descriptive terms
-- Be thorough and accurate in your extraction
+Be extremely conservative - it is better to mark something as "Unknown" than to guess incorrectly.
 """
 
     def _get_s3_image(self, s3_path: str) -> bytes:
@@ -101,6 +125,41 @@ Important guidelines:
         response = self.s3_client.get_object(Bucket=bucket, Key=key)
         return response['Body'].read()
 
+    def _compress_image(self, image_bytes: bytes, max_height: int = 240) -> bytes:
+        """
+        Compress and resize image to reduce file size.
+
+        Args:
+            image_bytes: Original image bytes
+            max_height: Maximum height in pixels (default 240p)
+
+        Returns:
+            Compressed image bytes as JPEG
+        """
+        # Open the image
+        img = Image.open(BytesIO(image_bytes))
+
+        # Calculate new dimensions maintaining aspect ratio
+        aspect_ratio = img.width / img.height
+        new_height = max_height
+        new_width = int(aspect_ratio * new_height)
+
+        # Resize the image
+        img_resized = img.resize((new_width, new_height), Image.Resampling.LANCZOS)
+
+        # Convert to RGB if necessary (for JPEG compatibility)
+        if img_resized.mode in ('RGBA', 'LA', 'P'):
+            background = Image.new('RGB', img_resized.size, (255, 255, 255))
+            if img_resized.mode == 'P':
+                img_resized = img_resized.convert('RGBA')
+            background.paste(img_resized, mask=img_resized.split()[-1] if img_resized.mode in ('RGBA', 'LA') else None)
+            img_resized = background
+
+        # Save to bytes with JPEG compression
+        output = BytesIO()
+        img_resized.save(output, format='JPEG', quality=85, optimize=True)
+        return output.getvalue()
+
     def extract_from_photo(self, s3_path: str) -> dict:
         """
         Extract coffee bean data from a photo stored in S3.
@@ -115,23 +174,72 @@ Important guidelines:
             # Get the image from S3
             image_bytes = self._get_s3_image(s3_path)
 
-            # Prepare the message with the image
-            user_message = f"""Please analyze this coffee bean bag photo and extract all the coffee bean information.
-The photo is from: {s3_path}
+            # Compress the image to reduce file size (720p resolution)
+            compressed_image_bytes = self._compress_image(image_bytes, max_height=720)
 
-Extract all relevant data and save it using the save_coffee_bean_data tool."""
+            # Generate compressed image S3 path
+            # Parse the original S3 path
+            path_parts = s3_path[5:].split('/', 1)
+            bucket = path_parts[0]
+            key = path_parts[1]
 
-            # TODO: FIX AGENT INVOKE CODE
-            # Run the agent with the image
-            response = self.agent(
-                user_message
+            # Create compressed image key by adding _compressed before the extension
+            if '.' in key:
+                base_key, ext = key.rsplit('.', 1)
+                compressed_key = f"{base_key}_compressed.jpg"
+            else:
+                compressed_key = f"{key}_compressed.jpg"
+
+            compressed_s3_path = f"s3://{bucket}/{compressed_key}"
+
+            # Upload compressed image to S3
+            self.s3_client.put_object(
+                Bucket=bucket,
+                Key=compressed_key,
+                Body=compressed_image_bytes,
+                ContentType='image/jpeg'
+            )
+
+            # Run the agent with structured output and image
+            # Using Strands SDK format: image field with format and source containing bytes
+            coffee_data = self.agent.structured_output(
+                CoffeeBeanData,
+                [
+                    {
+                        "image": {
+                            "format": "jpeg",
+                            "source": {
+                                "bytes": compressed_image_bytes,
+                            },
+                        },
+                    },
+                    {
+                        "text": f"Please analyze this coffee bean bag photo and extract all the coffee bean information from the image.",
+                    },
+                ]
+            )
+
+            print(f"Agent structured output response: {json.dumps(coffee_data.model_dump())}")
+
+            # Save the extracted data using the tool
+            save_result = save_coffee_bean_data(
+                coffee_roast_name=coffee_data.coffee_roast_name,
+                country_of_origin=coffee_data.country_of_origin,
+                roast_date=coffee_data.roast_date,
+                flavour_notes=coffee_data.flavour_notes,
+                vendor_name=coffee_data.vendor_name,
+                variety=coffee_data.variety,
+                process=coffee_data.process,
+                producer=coffee_data.producer,
+                image_s3_path=s3_path,
             )
 
             return {
                 "status": "success",
                 "s3_path": s3_path,
-                "response": response.content,
-                "tool_calls": len(response.tool_calls) if hasattr(response, 'tool_calls') else 0,
+                "compressed_s3_path": compressed_s3_path,
+                "extracted_data": coffee_data.model_dump(),
+                "save_result": save_result,
             }
 
         except Exception as e:
@@ -156,6 +264,6 @@ Extract all relevant data and save it using the save_coffee_bean_data tool."""
         result = self.extract_from_photo(s3_path)
 
         if result["status"] == "success":
-            return f"✅ Successfully processed {s3_path}\n\nAgent Response:\n{result['response']}"
+            return f"✅ Successfully processed {s3_path}\n\nAgent Response:\n{json.dumps(result)}"
         else:
-            return f"❌ Error processing {s3_path}\n\nError: {result['error']}"
+            return f"❌ Error processing {s3_path}\n\nError: {json.dumps(result)}"

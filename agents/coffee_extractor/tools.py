@@ -15,6 +15,7 @@ def save_coffee_bean_data(
     variety: str,
     process: str,
     producer: str,
+    image_s3_path: str = None,
 ) -> Dict[str, Any]:
     """
     Save coffee bean data to DynamoDB.
@@ -28,6 +29,7 @@ def save_coffee_bean_data(
         variety: Coffee variety (e.g., "Red Catuai", "Bourbon")
         process: Processing method (e.g., "washed", "natural")
         producer: Name of the coffee producer
+        image_s3_path: S3 path to the coffee bag image (optional)
 
     Returns:
         Dictionary with status and message
@@ -46,6 +48,7 @@ def save_coffee_bean_data(
             variety=variety,
             process=process,
             producer=producer,
+            image_s3_path=image_s3_path,
         )
 
         return {

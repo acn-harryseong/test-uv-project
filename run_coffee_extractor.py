@@ -23,7 +23,7 @@ def main():
     )
     parser.add_argument(
         "--model",
-        default="us.anthropic.claude-sonnet-4-5-v2:0",
+        default="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
         help="Bedrock model ID (default: Claude Sonnet 4.5)",
     )
 

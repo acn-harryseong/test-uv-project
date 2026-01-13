@@ -22,6 +22,7 @@ class CoffeeService:
         variety: str,
         process: str,
         producer: str,
+        image_s3_path: Optional[str] = None,
     ) -> CoffeeBeanData:
         """
         Create a new coffee bean entry.
@@ -35,6 +36,7 @@ class CoffeeService:
             variety: Coffee variety (e.g., "Red Catuai", "Bourbon")
             process: Processing method (e.g., "washed", "natural")
             producer: Name of the coffee producer
+            image_s3_path: S3 path to the coffee bag image (optional)
 
         Returns:
             Created CoffeeBeanData instance
@@ -51,6 +53,7 @@ class CoffeeService:
             variety=variety,
             process=process,
             producer=producer,
+            image_s3_path=image_s3_path,
         )
         coffee.save()
         return coffee
@@ -81,6 +84,7 @@ class CoffeeService:
         variety: Optional[str] = None,
         process: Optional[str] = None,
         producer: Optional[str] = None,
+        image_s3_path: Optional[str] = None,
     ) -> Optional[CoffeeBeanData]:
         """
         Update an existing coffee bean entry.
@@ -94,6 +98,7 @@ class CoffeeService:
             variety: New coffee variety (optional)
             process: New processing method (optional)
             producer: New producer name (optional)
+            image_s3_path: New S3 path to the coffee bag image (optional)
 
         Returns:
             Updated CoffeeBeanData instance if found, None otherwise
@@ -117,6 +122,8 @@ class CoffeeService:
             actions.append(CoffeeBeanData.process.set(process))
         if producer is not None:
             actions.append(CoffeeBeanData.producer.set(producer))
+        if image_s3_path is not None:
+            actions.append(CoffeeBeanData.image_s3_path.set(image_s3_path))
 
         if actions:
             coffee.update(actions=actions)

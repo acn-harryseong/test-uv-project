@@ -23,6 +23,7 @@ class CoffeeBeanData(Model):
         variety: Coffee variety (e.g., "Red Catuai", "Tabi", "Bourbon")
         process: Processing method (e.g., "washed", "natural", "natural anaerobic")
         producer: Name of the coffee producer (e.g., "Octavio Peralta")
+        image_s3_path: S3 path to the coffee bag image (optional)
     """
     class Meta:
         table_name = TABLE_NAME_COFFEE_BEAN
@@ -39,3 +40,4 @@ class CoffeeBeanData(Model):
     variety = UnicodeAttribute()
     process = UnicodeAttribute()
     producer = UnicodeAttribute()
+    image_s3_path = UnicodeAttribute(null=True)
