@@ -4,6 +4,9 @@ Tools for Coffee Bean Data Extractor Agent.
 from datetime import datetime
 from typing import Any, Dict
 from services.coffee_service import CoffeeService
+from agents.coffee_extractor.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 
 def save_coffee_bean_data(
@@ -15,7 +18,7 @@ def save_coffee_bean_data(
     variety: str,
     process: str,
     producer: str,
-    image_s3_path: str = None,
+    image_s3_path: str | None = None,
 ) -> Dict[str, Any]:
     """
     Save coffee bean data to DynamoDB.
@@ -35,8 +38,15 @@ def save_coffee_bean_data(
         Dictionary with status and message
     """
     try:
+        logger.debug(f"Saving coffee bean data for: {coffee_roast_name}")
+
         # Parse the roast date if provided
         parsed_date = datetime.fromisoformat(roast_date.replace('Z', '+00:00')) if roast_date else None
+
+        if roast_date:
+            logger.debug(f"Parsed roast date: {roast_date} -> {parsed_date}")
+        else:
+            logger.debug("No roast date provided")
 
         # Save to DynamoDB
         coffee = CoffeeService.create_coffee_bean(
@@ -51,12 +61,15 @@ def save_coffee_bean_data(
             image_s3_path=image_s3_path,
         )
 
+        logger.info(f"Successfully saved coffee bean data for '{coffee_roast_name}' to DynamoDB")
+
         return {
             "status": "success",
             "message": f"Successfully saved coffee bean data for '{coffee_roast_name}'",
             "coffee_roast_name": coffee.coffee_roast_name,
         }
     except Exception as e:
+        logger.error(f"Failed to save coffee bean data for '{coffee_roast_name}': {str(e)}")
         return {
             "status": "error",
             "message": f"Failed to save coffee bean data: {str(e)}",

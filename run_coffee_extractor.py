@@ -3,8 +3,9 @@
 Entry point for running the Coffee Bean Data Extractor Agent.
 """
 import argparse
+import logging
 import os
-from agents.coffee_extractor import CoffeeExtractorAgent
+from agents.coffee_extractor import CoffeeExtractorAgent, configure_logging
 
 
 def main():
@@ -26,18 +27,50 @@ def main():
         default="global.anthropic.claude-sonnet-4-5-20250929-v1:0",
         help="Bedrock model ID (default: Claude Sonnet 4.5)",
     )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Logging level (default: INFO)",
+    )
+    parser.add_argument(
+        "--compression-height",
+        type=int,
+        default=720,
+        help="Maximum image height in pixels (default: 720)",
+    )
+    parser.add_argument(
+        "--compression-quality",
+        type=int,
+        default=85,
+        help="JPEG compression quality 1-100 (default: 85)",
+    )
+    parser.add_argument(
+        "--no-upload-compressed",
+        action="store_true",
+        help="Don't upload compressed image back to S3",
+    )
 
     args = parser.parse_args()
+
+    # Configure logging
+    log_level = getattr(logging, args.log_level)
+    configure_logging(level=log_level)
 
     # Initialize the agent
     print(f"🤖 Initializing Coffee Extractor Agent...")
     print(f"   Region: {args.region}")
     print(f"   Model: {args.model}")
+    print(f"   Log Level: {args.log_level}")
+    print(f"   Compression: {args.compression_height}px @ {args.compression_quality}% quality")
     print()
 
     agent = CoffeeExtractorAgent(
         region=args.region,
         model_id=args.model,
+        compression_height=args.compression_height,
+        compression_quality=args.compression_quality,
+        upload_compressed=not args.no_upload_compressed,
     )
 
     # Process the image
