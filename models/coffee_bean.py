@@ -34,7 +34,7 @@ class CoffeeBeanData(Model):
 
     # Attributes
     country_of_origin = UnicodeAttribute()
-    roast_date = UTCDateTimeAttribute()
+    roast_date = UTCDateTimeAttribute(null=True)
     flavour_notes = ListAttribute(of=UnicodeAttribute)
     vendor_name = UnicodeAttribute()
     variety = UnicodeAttribute()

@@ -16,7 +16,7 @@ class CoffeeService:
     def create_coffee_bean(
         coffee_roast_name: str,
         country_of_origin: str,
-        roast_date: datetime,
+        roast_date: Optional[datetime],
         flavour_notes: List[str],
         vendor_name: str,
         variety: str,
@@ -30,7 +30,7 @@ class CoffeeService:
         Args:
             coffee_roast_name: Name of the coffee roast
             country_of_origin: Country of origin
-            roast_date: Date when coffee was roasted
+            roast_date: Date when coffee was roasted (optional)
             flavour_notes: List of flavor characteristics
             vendor_name: Vendor/roaster name
             variety: Coffee variety (e.g., "Red Catuai", "Bourbon")

@@ -9,7 +9,7 @@ from services.coffee_service import CoffeeService
 def save_coffee_bean_data(
     coffee_roast_name: str,
     country_of_origin: str,
-    roast_date: str,
+    roast_date: str | None,
     flavour_notes: list[str],
     vendor_name: str,
     variety: str,
@@ -23,7 +23,7 @@ def save_coffee_bean_data(
     Args:
         coffee_roast_name: Name of the coffee roast
         country_of_origin: Country where the beans are from
-        roast_date: Date when coffee was roasted (ISO format string)
+        roast_date: Date when coffee was roasted (ISO format string), or None if not available
         flavour_notes: List of flavor characteristics
         vendor_name: Name of the vendor/roaster
         variety: Coffee variety (e.g., "Red Catuai", "Bourbon")
@@ -35,8 +35,8 @@ def save_coffee_bean_data(
         Dictionary with status and message
     """
     try:
-        # Parse the roast date
-        parsed_date = datetime.fromisoformat(roast_date.replace('Z', '+00:00'))
+        # Parse the roast date if provided
+        parsed_date = datetime.fromisoformat(roast_date.replace('Z', '+00:00')) if roast_date else None
 
         # Save to DynamoDB
         coffee = CoffeeService.create_coffee_bean(

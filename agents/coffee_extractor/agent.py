@@ -16,7 +16,7 @@ class CoffeeBeanData(BaseModel):
     """Structured data model for coffee bean information extracted from photos."""
     coffee_roast_name: str = Field(description="Name of the coffee roast/product")
     country_of_origin: str = Field(description="Country where the beans are from")
-    roast_date: str = Field(description="Date when coffee was roasted (ISO format YYYY-MM-DD)")
+    roast_date: str | None = Field(default=None, description="Date when coffee was roasted (ISO format YYYY-MM-DD), or null if not visible")
     flavour_notes: list[str] = Field(description="List of flavor characteristics")
     vendor_name: str = Field(description="Name of the vendor/roaster")
     variety: str = Field(description="Coffee variety (e.g., 'Red Catuai', 'Bourbon', 'Heirloom')")
@@ -85,7 +85,7 @@ CRITICAL RULES - YOU MUST FOLLOW THESE:
 - DO NOT hallucinate or fabricate any data
 - Extract text EXACTLY as it appears in the image - do not correct spelling or change wording
 - If the text is blurry or unclear, use "Unknown" rather than guessing
-- For roast dates: only extract if a date is clearly visible; if you only see partial date info, use "Unknown"
+- For roast_date: only extract if a date is clearly visible; if you only see partial date info or no date at all, use null (not "Unknown")
 - For flavour notes: only extract if flavor descriptors are printed on the bag; if none are visible, use an empty list []
 
 Examples of what NOT to do:
