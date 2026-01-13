@@ -4,24 +4,12 @@ Coffee Bean Data Extractor Agent using Strands SDK.
 import json
 import boto3
 from io import BytesIO
-from typing import Optional
 from PIL import Image
-from pydantic import BaseModel, Field
 from strands import Agent
 from strands.models import BedrockModel
 from agents.coffee_extractor.tools import save_coffee_bean_data
-
-
-class CoffeeBeanData(BaseModel):
-    """Structured data model for coffee bean information extracted from photos."""
-    coffee_roast_name: str = Field(description="Name of the coffee roast/product")
-    country_of_origin: str = Field(description="Country where the beans are from")
-    roast_date: str | None = Field(default=None, description="Date when coffee was roasted (ISO format YYYY-MM-DD), or null if not visible")
-    flavour_notes: list[str] = Field(description="List of flavor characteristics")
-    vendor_name: str = Field(description="Name of the vendor/roaster")
-    variety: str = Field(description="Coffee variety (e.g., 'Red Catuai', 'Bourbon', 'Heirloom')")
-    process: str = Field(description="Processing method (e.g., 'washed', 'natural', 'honey')")
-    producer: str = Field(description="Name of the coffee producer/farm")
+from agents.coffee_extractor.models import CoffeeBeanData
+from agents.coffee_extractor.prompts import COFFEE_EXTRACTOR_SYSTEM_PROMPT
 
 
 class CoffeeExtractorAgent:
@@ -62,40 +50,7 @@ class CoffeeExtractorAgent:
 
     def _get_system_prompt(self) -> str:
         """Get the system prompt for the agent."""
-        return """You are a coffee bean data extraction specialist. Your task is to analyze photos of coffee bean bags and extract ONLY information that is clearly visible in the image.
-
-When given a photo of a coffee bean bag, you should:
-
-1. Carefully examine the image to identify all text and labels that are actually present
-2. Extract ONLY the following information that you can actually see in the image:
-   - Coffee roast name (the product name)
-   - Country of origin
-   - Roast date (convert to ISO format YYYY-MM-DD)
-   - Flavour notes (as a list of strings like ["dried berry", "dark plum", "black grapes", "lavender"])
-   - Vendor name (the roaster/company name like "NYLON")
-   - Variety (coffee variety like "Red Catuai", "Bourbon", "Heirloom")
-   - Process (processing method like "washed", "natural", "honey")
-   - Producer (the farm or producer name)
-
-CRITICAL RULES - YOU MUST FOLLOW THESE:
-- ONLY extract text that is actually visible in the image
-- If information is not visible or readable in the image, you MUST use "Unknown" as the value
-- DO NOT infer, guess, or make up any information that is not explicitly shown in the image
-- DO NOT use your general knowledge about coffee to fill in missing information
-- DO NOT hallucinate or fabricate any data
-- Extract text EXACTLY as it appears in the image - do not correct spelling or change wording
-- If the text is blurry or unclear, use "Unknown" rather than guessing
-- For roast_date: only extract if a date is clearly visible; if you only see partial date info or no date at all, use null (not "Unknown")
-- For flavour notes: only extract if flavor descriptors are printed on the bag; if none are visible, use an empty list []
-
-Examples of what NOT to do:
-- DO NOT assume a coffee is from Ethiopia just because you see "Heirloom" variety
-- DO NOT guess a roast date based on freshness appearance
-- DO NOT infer a producer name from partial text
-- DO NOT assume "washed" process if no process is mentioned
-
-Be extremely conservative - it is better to mark something as "Unknown" than to guess incorrectly.
-"""
+        return COFFEE_EXTRACTOR_SYSTEM_PROMPT
 
     def _get_s3_image(self, s3_path: str) -> bytes:
         """
